@@ -31,14 +31,16 @@ def drop_irregular_columns(data_df):
 # 用于聚类模型
 def main(args):
     std = StandardScaler()
-    # 加载数据,　drop标签列, 归一化
+    # 加载数据
     data_name = args['data_name']
-    data = pd.read_csv('data/' + data_name + '.csv', encoding='utf-8')
-    _data_x = drop_irregular_columns(data)
+    _data_x = pd.read_csv('data/' + data_name + '.csv', encoding='utf-8')
+    if data_name == 'diabetic_data':
+        # 　如果没有preprocess,　则drop标签列, 归一化
+        _data_x = drop_irregular_columns(_data_x)
     data_x = pd.DataFrame(std.fit_transform(_data_x))
     # 选模型
     if args['model_name'] == 'KMeans':
-        clf = KMeans()
+        clf = KMeans(args['k'], args['max_iter'])
     elif args['model_name'] == 'Clique':
         clf = Clique()
     elif args['model_name'] == 'DBSCAN':
@@ -64,6 +66,7 @@ if __name__ == "__main__":
     # parser.add_argument('--train_size', type=float, default=0.8)
     # hyper parameters
     parser.add_argument('--k', type=int, default=3, help="k for k-means")
+    parser.add_argument('--max_iter', type=int, default=114514, help="max iteration for k-means")
     args = parser.parse_args()
     args = vars(args)
     print(main(args))
