@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
+import time
 
 nominal_cols = ["race", "gender", "admission_type_id", "discharge_disposition_id", "admission_source_id", "change",
                 "diabetesMed", "metformin", "glimepiride", "glipizide", "glyburide", "pioglitazone",
@@ -46,7 +47,10 @@ class Calculator:
             self.id2count_split[cluster_id] = id2count_merge
 
     def get_matrix_split(self, u, node, i):
-        return self.id2count_split[i][u][node[u]]
+        try:
+            return self.id2count_split[i][u][node[u]]
+        except KeyError:
+            return 0
 
     def get_matrix_merge(self, u, node):
         return self.id2count_merge[u][node[u]]
@@ -57,11 +61,11 @@ class Calculator:
         # 　对于离散无序的nominal属性, 用VDM(Value Difference Metric)
         vdm = 0
         for u in self.nominal_ids:
-            for i in range(self.k):
+            m_ua = self.get_matrix_merge(u, node)
+            m_ub = self.get_matrix_merge(u, center)
+            for i in range(len(self.id2count_split)):
                 m_uai = self.get_matrix_split(u, node, i)
                 m_ubi = self.get_matrix_split(u, center, i)
-                m_ua = self.get_matrix_merge(u, node)
-                m_ub = self.get_matrix_merge(u, center)
                 vdm += (m_uai / m_ua - m_ubi / m_ub) ** 2
 
         return np.sqrt(minkowski + vdm)
@@ -104,51 +108,54 @@ class KMeans:
             cluster_dict[cluster_class].append(node)
         # 更新counter
         np_cluster_dict = {}
-        for k, v in cluster_dict:
+        for k, v in cluster_dict.items():
             np_data = np.asarray(v)
             np_cluster_dict[k] = np_data
         self.calculator.update_count(np_cluster_dict)
         return cluster_dict, np_cluster_dict
 
     def get_avg_center(self, np_cluster_dict):
-        new_center = []
+        new_centers = []
         for i in range(self.k):
             # 初始化一个点
-            center = np_cluster_dict[i][0]
+            center_list = np_cluster_dict[i][0]
             # 算平均
             cluster_nodes = np_cluster_dict[i]
             avg = np.mean(cluster_nodes[:, self.calculator.numerical_ids], axis=0)
-            center[self.calculator.numerical_ids] = avg
+            center_list[self.calculator.numerical_ids] = avg
             # 对于类别属性,选出现次数最多的 而非简单平均 (TODO　这种做法有待商榷)
             for col_id in self.calculator.nominal_ids:
                 # np.unique默认是降序
                 unique = np.unique(cluster_nodes[:, col_id])
-                center[col_id] = unique[0]
-            new_center.append(center)
-        return new_center
+                center_list[col_id] = unique[0]
+            new_center.append(center_list)
+        return new_centers
 
     def predict(self, df):
         # 数据准备
         data = df.to_numpy()
         self.calculator = Calculator(df, self.k, data)
         # 初始随机选中心
-        center = self.random_center(data)
-        cluster_dict, np_cluster_dict = self.get_cluster(data, center)
-        new_variance = self.calculator.cal_variance(cluster_dict, center)
+        center_list = self.random_center(data)
+        cluster_dict, np_cluster_dict = self.get_cluster(data, center_list)
+        new_variance = self.calculator.cal_variance(cluster_dict, center_list)
         old_variance = 1
         _iter = 0
         # 直到整体的中心到点的距离variance小于一个min_variance值 或者　迭代到max_iter次
+        start_time = time.time()
         while abs(old_variance - new_variance) > self.min_variance:
+            end_time = time.time()
+            print(f"Iter {_iter}, Cost {end_time - start_time}, Loss {old_variance}")
             if _iter >= self.max_iter:
                 break
             # 重新选平均值点作为簇中心
-            center = self.get_avg_center(np_cluster_dict)
-            cluster_dict, np_cluster_dict = self.get_cluster(data, center)
+            center_list = self.get_avg_center(np_cluster_dict)
+            cluster_dict, np_cluster_dict = self.get_cluster(data, center_list)
             old_variance = new_variance
-            new_variance = self.calculator.cal_variance(cluster_dict, center)
+            new_variance = self.calculator.cal_variance(cluster_dict, center_list)
             _iter += 1
-        print("Iteration of KMeans is, ", _iter)
-        return cluster_dict, center
+        print("End Iteration of KMeans is, ", _iter)
+        return cluster_dict, center_list
 
 
 class Clique:

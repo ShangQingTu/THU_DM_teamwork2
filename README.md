@@ -69,17 +69,32 @@ id2desc['discharge_disposition_id'].get('1', None) #return 'Discharged to home'
 
 ## Distance
 
-因为输入既有离散无序的nominal属性，也有连续有序的numerical属性，所以将闵可夫斯基距离和VDM(Value Difference Metric)结合，形成混合属性的距离，假设有$n_c$个有序属性，$n-n_c$个无序属性，则对于2个数据点(向量)$x_i$和$x_j$，它们之间的混合距离为：
+因为输入既有离散无序的nominal属性，也有连续有序的numerical属性，所以将闵可夫斯基距离和VDM(Value Difference Metric)结合，形成混合属性的距离，假设有    $n_c$    个有序属性，    $n-n_c$    个无序属性，则对于2个数据点(向量)    $x_i$    和    $x_j$    ，它们之间的混合距离为：
+
 $$
 dist_p(x_i,x_j) = (\sum_{u=1}^{n_c}|x_{iu}-x_{ju}|^p + \sum_{u=n_c+1}^{n}VDM_p(x_{iu},x_{ju}))^{\frac{1}{p}}
 $$
+
+
 其中p是范数，我们这次作业取p=2，VDM的定义是在属性u上两个离散值a,b之间的距离：
+
+
 $$
 VDM_p(a,b) =\sum_{i=1}^{k}|\frac{m_{u,a,i}}{m_{u,a}} - \frac{m_{u,b,i}}{m_{u,b}}|^p
 $$
-用$m_{u,a}$ 表示在属性u上取值a的样本数；$m_{u,a,i}$ 表示在第i个簇中，属性u取值a的样本数。k是聚类簇数。
 
 
+用   $m_{u,a}$     表示在属性u上取值a的样本数；    $m_{u,a,i}$     表示在第i个簇中，属性u取值a的样本数。k是聚类簇数。
+
+
+
+## Run
+
+kmeans已经可以跑了(Cost是时间花费，Loss是各个点到中心的举例之和):
+
+![](pic/kmeans.png)
+
+在10个iteration之后，各个点到中心的举例之和(Loss)基本不会变了，大约45秒跑一个iteration
 
 
 ## Evaluation

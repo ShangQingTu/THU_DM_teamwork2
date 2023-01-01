@@ -1,7 +1,8 @@
+import random
 import pandas as pd
 import numpy as np
 import os
-from sklearn.metrics import *
+from sklearn import metrics
 from sklearn.preprocessing import StandardScaler
 from model.cluster import KMeans, DBSCAN, Clique
 
@@ -28,16 +29,23 @@ def drop_irregular_columns(data_df):
     return final_df
 
 
+def set_seeds(seed):
+    # 随机种子
+    random.seed(seed)
+    np.random.seed(seed)
+
+
 # 用于聚类模型
 def main(args):
     std = StandardScaler()
     # 加载数据
     data_name = args['data_name']
     _data_x = pd.read_csv('data/' + data_name + '.csv', encoding='utf-8')
+    set_seeds(args['seed'])
     if data_name == 'diabetic_data':
         # 　如果没有preprocess,　则drop标签列, 归一化
         _data_x = drop_irregular_columns(_data_x)
-    data_x = pd.DataFrame(std.fit_transform(_data_x))
+        _data_x = pd.DataFrame(std.fit_transform(_data_x))
     # 选模型
     if args['model_name'] == 'KMeans':
         clf = KMeans(args['k'], args['max_iter'])
@@ -48,10 +56,20 @@ def main(args):
     else:
         clf = None
     # 聚类
-    cluster_result = clf.predict(data_x)
-    # print(accuracy_score(Y_test, Y_result), roc_auc_score(Y_test, Y_result), f1_score(Y_test, Y_result))
-    # import pdb;pdb.set_trace()
-    return cluster_result
+    cluster_dict, center_list = clf.predict(_data_x)
+    # 评价
+    evaluate(cluster_dict, _data_x)
+
+
+def evaluate(cluster_dict, _data_x):
+    # TODO 找数据对齐的标签
+    labels_true, labels = cluster_dict, _data_x
+    print(f"Homogeneity: {metrics.homogeneity_score(labels_true, labels):.3f}")
+    print(f"Completeness: {metrics.completeness_score(labels_true, labels):.3f}")
+    print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.3f}")
+    print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.3f}")
+    print("Adjusted Mutual Information:"f" {metrics.adjusted_mutual_info_score(labels_true, labels):.3f}")
+    print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.3f}")
 
 
 if __name__ == "__main__":
@@ -61,12 +79,13 @@ if __name__ == "__main__":
     # model and data
     parser.add_argument('--model_name', type=str, default='KMeans',
                         choices=['KMeans', 'Clique', 'DBSCAN'])
-    parser.add_argument('--data_name', type=str, default='diabetic_data',
+    parser.add_argument('--data_name', type=str, default='processed_data',
                         choices=['diabetic_data', 'processed_data'])
     # parser.add_argument('--train_size', type=float, default=0.8)
     # hyper parameters
+    parser.add_argument('--seed', type=int, default=1453, help="random seed")
     parser.add_argument('--k', type=int, default=3, help="k for k-means")
-    parser.add_argument('--max_iter', type=int, default=114514, help="max iteration for k-means")
+    parser.add_argument('--max_iter', type=int, default=16, help="max iteration for k-means")
     args = parser.parse_args()
     args = vars(args)
     print(main(args))
