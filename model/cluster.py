@@ -22,8 +22,6 @@ class Calculator:
         self.id2count_split = {}  # key: cluster_id, value: a dict like self.id2count_merge
         self.id2count_merge = {}  # key: column_id, value: Dict of Counter, Counter: {data's value :count}
         self.init_count(data)
-        # 　假设一开始都在一个cluster上
-        self.update_count({0: data})
 
     def init_count(self, data):
         # 初始化总体的counter
@@ -128,13 +126,15 @@ class KMeans:
                 # np.unique默认是降序
                 unique = np.unique(cluster_nodes[:, col_id])
                 center_list[col_id] = unique[0]
-            new_center.append(center_list)
+            new_centers.append(center_list)
         return new_centers
 
     def predict(self, df):
         # 数据准备
         data = df.to_numpy()
         self.calculator = Calculator(df, self.k, data)
+        # 　假设一开始都在一个cluster上
+        self.calculator.update_count({0: data})
         # 初始随机选中心
         center_list = self.random_center(data)
         cluster_dict, np_cluster_dict = self.get_cluster(data, center_list)
@@ -174,6 +174,181 @@ class DBSCAN:
 
     def predict(self, df):
         pass
+
+
+class FastCalculator(Calculator):
+    """
+    专门给HierarchicalCluster设计的 FastCalculator
+    """
+
+    def __init__(self, df, k, data):
+        super().__init__(df, k, data)
+        self.id2count_merge_current = {}  # 记录当前时刻的$m_{u,a}^*$
+        self.id2count_reverse_square = {}  # 记录 $ \frac{1}{m_{u,a}^2} $
+        self.vdm_log = {}  # 记录 $  \frac{ m_{u,a}^{*}  }{m_{u,a}^2} $
+
+    def init_count(self, data):
+        super().init_count(data)
+        # 初始化 id2count_merge_current 与 id2count_reverse_square
+        self.id2count_merge_current = self.id2count_merge
+        for u, counter in self.id2count_merge.items():
+            reverse_square_counter = {}
+            for k, c in counter.items():
+                reverse_square_counter[k] = 1 / (c * c)
+            self.id2count_reverse_square[u] = reverse_square_counter
+        self.update_vdm()
+
+    def update_vdm(self):
+        # 预先计算　 $  \frac{ m_{u,a}^{*}  }{m_{u,a}^2} $
+        for u, counter in self.id2count_merge_current.items():
+            vdm_log = {}
+            for k, c in counter.items():
+                vdm_log[k] = c * self.id2count_reverse_square[u][k]
+            self.vdm_log[u] = vdm_log
+
+    def decrease_count(self, node1, node2, new_node):
+        # 对于Hierarchical聚类,任何时候每个cluster都是一个合并好的簇,其属性都只有1种取值
+        # k在若干次合并后会逐渐减少, id2count_merge_current　需要更新
+        vec1 = node1.vec
+        vec2 = node2.vec
+        new_vec = new_node.vec
+        for u, counter in self.id2count_merge_current.items():
+            # 新簇的value
+            new_value = new_vec[u]
+            counter[new_value] += 1
+            # 合并掉的2个簇的value
+            missing_value1 = vec1[u]
+            counter[missing_value1] -= 1
+            missing_value2 = vec2[u]
+            counter[missing_value2] -= 1
+
+        self.update_vdm()
+
+    def cal_distance(self, node, center):
+        # 　对于连续有序的numerical属性, 用闵可夫斯基距离
+        minkowski = np.sum(np.square(node[self.numerical_ids] - center[self.numerical_ids]))
+        # 　对于离散无序的nominal属性, 用VDM(Value Difference Metric)
+        vdm = 0
+        for u in self.nominal_ids:
+            a = node[u]
+            b = center[u]
+            if a == b:
+                # $ VDM_p(a,b) $ 　　= 0
+                continue
+            else:
+                vdm_log = self.vdm_log[u]
+                vdm += vdm_log[a] + vdm_log[b]
+
+        return np.sqrt(minkowski + vdm)
+
+
+class ClusterNode:
+    def __init__(self, vec, left=None, right=None, distance=-1, _id=None, count=1):
+        """
+        :param vec: 保存两个数据聚类后形成新的中心
+         :param left: 左节点
+         :param right:  右节点
+         :param distance: 两个节点的距离
+         :param _id: 用来标记哪些节点是计算过的
+         :param count: 这个节点的叶子节点个数
+        """
+        self.vec = vec
+        self.left = left
+        self.right = right
+        self.distance = distance
+        self.id = _id
+        self.count = count
+
+
+class HierarchicalCluster:
+    def __init__(self, k=1):
+        self.k = k
+        self.calculator = None
+        self.labels = None
+        self.nodes = None
+
+    def predict(self, df):
+        # 数据准备
+        data = df.to_numpy()
+        self.calculator = FastCalculator(df, self.k, data)
+        nodes = [ClusterNode(vec=v, _id=i) for i, v in enumerate(data)]
+        distances = {}
+        # 特征的维度
+        point_num, future_num = np.shape(data)
+        self.labels = [-1] * point_num
+        current_clust_id = -1
+        start_time = time.time()
+        while len(nodes) > self.k:
+            end_time = time.time()
+            print(f"Iter {len(df) - len(nodes)}, Cost {end_time - start_time}")
+            min_dist = float('inf')
+            nodes_len = len(nodes)
+            closest_part = None  # 表示最相似的两个聚类
+            for i in range(nodes_len - 1):
+                for j in range(i + 1, nodes_len):
+                    # 为了不重复计算距离，保存在字典内
+                    d_key = (nodes[i].id, nodes[j].id)
+                    if d_key not in distances:
+                        distances[d_key] = self.calculator.cal_distance(nodes[i].vec, nodes[j].vec)
+                    d = distances[d_key]
+                    if d < min_dist:
+                        min_dist = d
+                        closest_part = (i, j)
+            # 合并两个聚类
+            part1, part2 = closest_part
+            node1, node2 = nodes[part1], nodes[part2]
+            new_vec = self.combine(node1, node2)
+            new_node = ClusterNode(vec=new_vec,
+                                   left=node1,
+                                   right=node2,
+                                   distance=min_dist,
+                                   _id=current_clust_id,
+                                   count=node1.count + node2.count)
+            self.calculator.decrease_count(node1, node2, new_node)
+            current_clust_id -= 1
+            del nodes[part2], nodes[part1]  # 一定要先del索引较大的
+            nodes.append(new_node)
+        self.nodes = nodes
+        self.calc_label()
+        return self.labels, None
+
+    def combine(self, node1, node2):
+        """
+        合并2个簇
+        """
+        vec1 = node1.vec
+        vec2 = node2.vec
+        new_vec = vec1
+        sum_count = node1.count + node2.count
+        # 对于numerical属性,加权合并
+        new_vec[self.calculator.numerical_ids] = (vec1[self.calculator.numerical_ids] * node1.count + vec2[
+            self.calculator.numerical_ids] * node2.count) / sum_count
+        # 对于nominal属性,按大者合并
+        # TODO　这种合并能算得快些, 但有待商榷
+        for u in self.calculator.nominal_ids:
+            if vec1[u] != vec2[u]:
+                if node2.count > node1.count:
+                    new_vec[u] = vec2[u]
+        return new_vec
+
+    def calc_label(self):
+        """
+        调取聚类的结果
+        """
+        for i, node in enumerate(self.nodes):
+            # 将节点的所有叶子节点都分类
+            self.leaf_traversal(node, i)
+
+    def leaf_traversal(self, node: ClusterNode, label):
+        """
+        递归遍历叶子节点
+        """
+        if node.left is None and node.right is None:
+            self.labels[node.id] = label
+        if node.left:
+            self.leaf_traversal(node.left, label)
+        if node.right:
+            self.leaf_traversal(node.right, label)
 
 
 if __name__ == '__main__':

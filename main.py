@@ -4,7 +4,7 @@ import numpy as np
 import os
 from sklearn import metrics
 from sklearn.preprocessing import StandardScaler
-from model.cluster import KMeans, DBSCAN, Clique
+from model.cluster import KMeans, DBSCAN, Clique, HierarchicalCluster
 
 
 def drop_irregular_columns(data_df):
@@ -53,6 +53,8 @@ def main(args):
         clf = Clique()
     elif args['model_name'] == 'DBSCAN':
         clf = DBSCAN()
+    elif args['model_name'] == 'Hierarchical':
+        clf = HierarchicalCluster(args['k'])
     else:
         clf = None
     # 聚类
@@ -68,7 +70,7 @@ def evaluate(cluster_dict, _data_x):
     print(f"Completeness: {metrics.completeness_score(labels_true, labels):.3f}")
     print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.3f}")
     print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.3f}")
-    print("Adjusted Mutual Information:"f" {metrics.adjusted_mutual_info_score(labels_true, labels):.3f}")
+    print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels_true, labels):.3f}")
     print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.3f}")
 
 
@@ -78,7 +80,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # model and data
     parser.add_argument('--model_name', type=str, default='KMeans',
-                        choices=['KMeans', 'Clique', 'DBSCAN'])
+                        choices=['KMeans', 'Clique', 'DBSCAN', 'Hierarchical'])
     parser.add_argument('--data_name', type=str, default='processed_data',
                         choices=['diabetic_data', 'processed_data'])
     # parser.add_argument('--train_size', type=float, default=0.8)

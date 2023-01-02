@@ -83,12 +83,37 @@ $$
 VDM_p(a,b) =\sum_{i=1}^{k}|\frac{m_{u,a,i}}{m_{u,a}} - \frac{m_{u,b,i}}{m_{u,b}}|^p
 $$
 
-
 用   $m_{u,a}$     表示在属性u上取值a的样本数；    $m_{u,a,i}$     表示在第i个簇中，属性u取值a的样本数。k是聚类簇数。
+
+### Hierarchical Case
+
+特别的，对于Hierarchical聚类,任何时候每个cluster都是一个由若干点合并好的新点,其属性都只有1种取值，所以　 $m_{u,b,i}$　 肯定只能取0或1
+
+当 a=b时，　　$ VDM_p(a,b)  $ 　　= 0
+
+当 a!=b时，
+
+
+
+
+$$
+VDM_p(a,b) = \frac{m_{u,a}^{*}}{m_{u,a}^2} + \frac{m_{u,b}^{*}}{m_{u,b}^2}
+$$
+
+
+用   $m_{u,a}^*$     表示当前属性u上取值a的样本数　(因为k在若干次合并后会逐渐减少)；
+
+
+
+
 
 
 
 ## Run
+
+```
+python main.py --model_name KMeans --max_iter 12
+```
 
 kmeans已经可以跑了(Cost是时间花费，Loss是各个点到中心的举例之和):
 
