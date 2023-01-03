@@ -41,7 +41,7 @@ id2desc['discharge_disposition_id'].get('1', None) #return 'Discharged to home'
  `glimepiride-pioglitazone`，
  `metformin-rosiglitazone`，
  `metformin-pioglitazone`
- 
+
  ## Feature Transform
  将剩下的所有特征分为三类：nominal、ordinal、numerical，其中
  - nominal: `race`, `gender`, `admission_type_id`, `discharge_disposition_id`, `admission_source_id`,`change`, `diabetesMed`,`metformin`, `glimepiride`, `glipizide`, `glyburide`, `pioglitazone`,
@@ -65,7 +65,71 @@ id2desc['discharge_disposition_id'].get('1', None) #return 'Discharged to home'
 - ~~基于Density的DBSCAN~~
 - 基于网格的聚类算法Clique
 
+
+
+## Distance
+
+因为输入既有离散无序的nominal属性，也有连续有序的numerical属性，所以将闵可夫斯基距离和VDM(Value Difference Metric)结合，形成混合属性的距离，假设有    $n_c$    个有序属性，    $n-n_c$    个无序属性，则对于2个数据点(向量)    $x_i$    和    $x_j$    ，它们之间的混合距离为：
+
+$$
+dist_p(x_i,x_j) = (\sum_{u=1}^{n_c}|x_{iu}-x_{ju}|^p + \sum_{u=n_c+1}^{n}VDM_p(x_{iu},x_{ju}))^{\frac{1}{p}}
+$$
+
+
+其中p是范数，我们这次作业取p=2，VDM的定义是在属性u上两个离散值a,b之间的距离：
+
+
+$$
+VDM_p(a,b) =\sum_{i=1}^{k}|\frac{m_{u,a,i}}{m_{u,a}} - \frac{m_{u,b,i}}{m_{u,b}}|^p
+$$
+
+用   $m_{u,a}$     表示在属性u上取值a的样本数；    $m_{u,a,i}$     表示在第i个簇中，属性u取值a的样本数。k是聚类簇数。
+
+### Hierarchical Case
+
+特别的，对于Hierarchical聚类,任何时候每个cluster都是一个由若干点合并好的新点,其属性都只有1种取值，所以　 $m_{u,b,i}$　 肯定只能取0或1
+
+当 a==b时,
+
+$$
+VDM_p(a,b) =0
+$$
+
+
+当 a!=b时,
+
+$$
+V_a =\frac{m_{u,a}^*}{m_{u,a}^p} \\
+$$
+
+$$
+VDM_p(a,b) =  V_a + V_b
+$$
+
+用   $m_{u,a}^*$     表示当前属性u上取值a的样本数　(因为k在若干次合并后会逐渐减少)；
+
+
+
+
+
+
+
+## Run
+
+```
+python main.py --model_name KMeans --max_iter 12
+```
+
+kmeans已经可以跑了(Cost是时间花费，Loss是各个点到中心的举例之和):
+
+![](pic/kmeans.png)
+
+在10个iteration之后，各个点到中心的举例之和(Loss)基本不会变了，大约45秒跑一个iteration
+
+
 ## Evaluation
+
+对于clustering的evaluation使用的是[sklearn包](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation)
 
 | 评价指标           | K-Means       | Clique                 |
 | ------------------ | ------------- | ---------------------- |
