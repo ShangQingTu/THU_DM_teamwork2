@@ -1,15 +1,18 @@
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import random
 import time
 
 nominal_cols = ["race", "gender", "admission_type_id", "discharge_disposition_id", "admission_source_id", "change",
                 "diabetesMed", "metformin", "glimepiride", "glipizide", "glyburide", "pioglitazone",
                 "rosiglitazone", "insulin"]
+only_numeric = False
 
 
 class Calculator:
     def __init__(self, df, k, data):
+        self.only_numeric = only_numeric
         self.k = k
         self.numerical_ids = []
         self.nominal_ids = []
@@ -56,6 +59,8 @@ class Calculator:
     def cal_distance(self, node, center):
         # 　对于连续有序的numerical属性, 用闵可夫斯基距离
         minkowski = np.sum(np.square(node[self.numerical_ids] - center[self.numerical_ids]))
+        if self.only_numeric:
+            return np.sqrt(minkowski)
         # 　对于离散无序的nominal属性, 用VDM(Value Difference Metric)
         vdm = 0
         for u in self.nominal_ids:
@@ -121,7 +126,7 @@ class KMeans:
             cluster_nodes = np_cluster_dict[i]
             avg = np.mean(cluster_nodes[:, self.calculator.numerical_ids], axis=0)
             center_list[self.calculator.numerical_ids] = avg
-            # 对于类别属性,选出现次数最多的 而非简单平均 (TODO　这种做法有待商榷)
+            # 对于类别属性,选出现次数最多的 而非简单平均 (这种做法有待商榷)
             for col_id in self.calculator.nominal_ids:
                 # np.unique默认是降序
                 unique = np.unique(cluster_nodes[:, col_id])
@@ -131,7 +136,14 @@ class KMeans:
 
     def predict(self, df):
         # 数据准备
+        df = df.drop(columns=["Unnamed: 0"])
         data = df.to_numpy()
+        ids = [[i] for i in range(len(data))]
+        ids_np = np.asarray(ids)
+        print(ids_np.shape)
+        print(data.shape)
+        data = np.concatenate([data, ids_np], axis=1)
+        print(data.shape)
         self.calculator = Calculator(df, self.k, data)
         # 　假设一开始都在一个cluster上
         self.calculator.update_count({0: data})
@@ -155,7 +167,12 @@ class KMeans:
             new_variance = self.calculator.cal_variance(cluster_dict, center_list)
             _iter += 1
         print("End Iteration of KMeans is, ", _iter)
-        return cluster_dict, center_list
+        node_id2label = [0] * len(data)
+        for label, nodes in cluster_dict.items():
+            for node in nodes:
+                node_id = node[-1]
+                node_id2label[node_id] = label
+        return node_id2label
 
 
 class Clique:
@@ -181,11 +198,12 @@ class FastCalculator(Calculator):
     专门给HierarchicalCluster设计的 FastCalculator
     """
 
-    def __init__(self, df, k, data):
-        super().__init__(df, k, data)
+    def __init__(self, df, k, data, real_fast=True):
+        self.real_fast = real_fast
         self.id2count_merge_current = {}  # 记录当前时刻的$m_{u,a}^*$
         self.id2count_reverse_square = {}  # 记录 $ \frac{1}{m_{u,a}^2} $
         self.vdm_log = {}  # 记录 $  \frac{ m_{u,a}^{*}  }{m_{u,a}^2} $
+        super().__init__(df, k, data)
 
     def init_count(self, data):
         super().init_count(data)
@@ -227,6 +245,8 @@ class FastCalculator(Calculator):
     def cal_distance(self, node, center):
         # 　对于连续有序的numerical属性, 用闵可夫斯基距离
         minkowski = np.sum(np.square(node[self.numerical_ids] - center[self.numerical_ids]))
+        if self.real_fast:
+            return np.sqrt(minkowski)
         # 　对于离散无序的nominal属性, 用VDM(Value Difference Metric)
         vdm = 0
         for u in self.nominal_ids:
@@ -284,7 +304,7 @@ class HierarchicalCluster:
             min_dist = float('inf')
             nodes_len = len(nodes)
             closest_part = None  # 表示最相似的两个聚类
-            for i in range(nodes_len - 1):
+            for i in tqdm(range(nodes_len - 1)):
                 for j in range(i + 1, nodes_len):
                     # 为了不重复计算距离，保存在字典内
                     d_key = (nodes[i].id, nodes[j].id)
@@ -304,7 +324,8 @@ class HierarchicalCluster:
                                    distance=min_dist,
                                    _id=current_clust_id,
                                    count=node1.count + node2.count)
-            self.calculator.decrease_count(node1, node2, new_node)
+            if not self.calculator.real_fast:
+                self.calculator.decrease_count(node1, node2, new_node)
             current_clust_id -= 1
             del nodes[part2], nodes[part1]  # 一定要先del索引较大的
             nodes.append(new_node)
@@ -324,11 +345,12 @@ class HierarchicalCluster:
         new_vec[self.calculator.numerical_ids] = (vec1[self.calculator.numerical_ids] * node1.count + vec2[
             self.calculator.numerical_ids] * node2.count) / sum_count
         # 对于nominal属性,按大者合并
-        # TODO　这种合并能算得快些, 但有待商榷
-        for u in self.calculator.nominal_ids:
-            if vec1[u] != vec2[u]:
-                if node2.count > node1.count:
-                    new_vec[u] = vec2[u]
+        # 这种合并能算得快些, 但有待商榷
+        if not self.calculator.real_fast:
+            for u in self.calculator.nominal_ids:
+                if vec1[u] != vec2[u]:
+                    if node2.count > node1.count:
+                        new_vec[u] = vec2[u]
         return new_vec
 
     def calc_label(self):

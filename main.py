@@ -58,20 +58,22 @@ def main(args):
     else:
         clf = None
     # 聚类
-    cluster_dict, center_list = clf.predict(_data_x)
+    node_id2label = clf.predict(_data_x)
     # 评价
-    evaluate(cluster_dict, _data_x)
+    evaluate(node_id2label, _data_x)
 
 
-def evaluate(cluster_dict, _data_x):
-    # TODO 找数据对齐的标签
-    labels_true, labels = cluster_dict, _data_x
+def evaluate(node_id2label, _data_x):
+    df = pd.read_csv("./data/label.csv")
+    labels_true = list(df["readmitted"])
+    #  找数据对齐的标签
+    labels = node_id2label
     print(f"Homogeneity: {metrics.homogeneity_score(labels_true, labels):.3f}")
     print(f"Completeness: {metrics.completeness_score(labels_true, labels):.3f}")
     print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.3f}")
     print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.3f}")
     print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels_true, labels):.3f}")
-    print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.3f}")
+    # print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.3f}")
 
 
 if __name__ == "__main__":
@@ -87,7 +89,7 @@ if __name__ == "__main__":
     # hyper parameters
     parser.add_argument('--seed', type=int, default=1453, help="random seed")
     parser.add_argument('--k', type=int, default=3, help="k for k-means")
-    parser.add_argument('--max_iter', type=int, default=16, help="max iteration for k-means")
+    parser.add_argument('--max_iter', type=int, default=128, help="max iteration for k-means")
     args = parser.parse_args()
     args = vars(args)
     print(main(args))

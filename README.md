@@ -63,7 +63,8 @@ id2desc['discharge_disposition_id'].get('1', None) #return 'Discharged to home'
 
 - 基于partitioning的K-Means
 - ~~基于Density的DBSCAN~~
-- 基于网格的聚类算法Clique
+- 基于层次合并的Hierarchical聚类算法
+- 基于网格的聚类算法Clique（TODO）
 
 
 
@@ -116,6 +117,8 @@ $$
 
 ## Run
 
+### K-meas
+
 ```
 python main.py --model_name KMeans --max_iter 12
 ```
@@ -124,8 +127,27 @@ kmeans已经可以跑了(Cost是时间花费，Loss是各个点到中心的举�
 
 ![](pic/kmeans.png)
 
-在10个iteration之后，各个点到中心的举例之和(Loss)基本不会变了，大约45秒跑一个iteration
+在33个iteration之后，各个点到中心的举例之和(Loss)基本不会变了，大约45秒跑一个iteration
 
+还尝试了只用numerical属性，速度会快很多，但是好像Loss的大小和用上2种属性差不多，看来numerical属性是在其中占主导地位的属性：
+
+![](pic/kmeans_only_numeric.png)
+
+### Hierarchical
+
+但是层次聚类貌似已经跑不动了:
+
+```
+python main.py --model_name Hierarchical --max_iter 12
+```
+
+![](pic/Hierarchical_cluster.png)
+
+### Clique
+
+可以参考前人实现过的[Clique](https://github.com/georgekatona/Clique)
+
+需要一位勇士来实现一下，可以新建一个Clique.py，因为cluster.py已经快400行了
 
 ## Evaluation
 
