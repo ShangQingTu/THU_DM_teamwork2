@@ -68,12 +68,13 @@ def evaluate(node_id2label, _data_x):
     labels_true = list(df["readmitted"])
     #  找数据对齐的标签
     labels = node_id2label
-    print(f"Homogeneity: {metrics.homogeneity_score(labels_true, labels):.3f}")
-    print(f"Completeness: {metrics.completeness_score(labels_true, labels):.3f}")
-    print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.3f}")
-    print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.3f}")
-    print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels_true, labels):.3f}")
-    # print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.3f}")
+    print(f"Homogeneity: {metrics.homogeneity_score(labels_true, labels):.5f}")
+    print(f"Completeness: {metrics.completeness_score(labels_true, labels):.5f}")
+    print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.5f}")
+    print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.5f}")
+    print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels_true, labels):.5f}")
+    print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.5f}")
+    print(f"Calinski Harabasz Index: {metrics.calinski_harabasz_score(_data_x, labels):.5f}")
 
 
 if __name__ == "__main__":
