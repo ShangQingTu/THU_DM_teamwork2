@@ -63,7 +63,7 @@ def main(args):
     # 聚类
     node_id2label = clf.predict(_data_x)
     # 评价
-    evaluate(node_id2label, pd.get_dummies(_data_x))
+    evaluate(node_id2label, _data_x)
 
 
 def evaluate(node_id2label, _data_x):
@@ -71,13 +71,13 @@ def evaluate(node_id2label, _data_x):
     labels_true = list(df["readmitted"])
     #  找数据对齐的标签
     labels = node_id2label
-    # print(f"Homogeneity: {metrics.homogeneity_score(labels_true, labels):.5f}")
-    # print(f"Completeness: {metrics.completeness_score(labels_true, labels):.5f}")
-    # print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.5f}")
-    # print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.5f}")
-    # print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels_true, labels):.5f}")
-    print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels[0]):.5f}")
-    print(f"Calinski Harabasz Index: {metrics.calinski_harabasz_score(_data_x, labels[0]):.5f}")
+    print(f"Silhouette Coefficient: {metrics.silhouette_score(_data_x, labels):.5f}")
+    print(f"Calinski Harabasz Index: {metrics.calinski_harabasz_score(_data_x, labels):.5f}")
+    print(f"Homogeneity: {metrics.homogeneity_score(labels_true, labels):.5f}")
+    print(f"Completeness: {metrics.completeness_score(labels_true, labels):.5f}")
+    print(f"V-measure: {metrics.v_measure_score(labels_true, labels):.5f}")
+    print(f"Adjusted Rand Index: {metrics.adjusted_rand_score(labels_true, labels):.5f}")
+    print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels_true, labels):.5f}")
 
 
 if __name__ == "__main__":
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     # parser.add_argument('--train_size', type=float, default=0.8)
     # hyper parameters
     parser.add_argument('--seed', type=int, default=1453, help="random seed")
-    parser.add_argument('--k', type=int, default=5, help="k for k-means")
+    parser.add_argument('--k', type=int, default=3, help="k for k-means")
     parser.add_argument('--max_iter', type=int, default=128, help="max iteration for k-means")
     args = parser.parse_args()
     args = vars(args)
