@@ -162,9 +162,8 @@ python main.py --model_name Hierarchical --max_iter 12
 | 紧凑度             |               |                        |
 | 分离度             |               |                        |
 
-| 评价指标                           | K-Means(VDM距离)|K-Means(gower距离)      |Hierarchical（VDM距离）|
+| 评价指标                           | K-Means(VDM距离)|K-Means(gower距离)      |Hierarchical（3000数据点采样、VDM距离）|
 | ------------------                | ------------- | -------------- |---- |
-| 算法性能                           | local optimum |  |simple but low quality|
 | 同质性分数（homogeneity_score）     |0.00007       | 0.00237           |0.00105|
 | 完整性分数（completeness_score）    |0.00007       | 0.00205            |0.00092|
 | V-度量（v_measure_score）           |0.00007        |0.00220          |0.00098|
