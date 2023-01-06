@@ -85,8 +85,10 @@ class Calculator:
                 v_sum += self.cal_distance(j, center[i])
         return v_sum
 
+
 class GowerCalculator(Calculator):
-    def __init__(self, df):
+    def __init__(self, df, k, data, only_numeric=False):
+        self.only_numeric = only_numeric
         self.numerical_ids = []
         self.nominal_ids = []
         # 记录numerical和nominal属性的id
@@ -109,16 +111,17 @@ class GowerCalculator(Calculator):
     def cal_distance(self, x, y):
         # x, y = x[:-1], y[:-1]
         num_dist = (1 - np.abs(x[self.numerical_ids] - y[self.numerical_ids]) / self.numerical_range).sum()
-        if only_numeric:
+        if self.only_numeric:
             cat_dist = 0
             dim = len(self.numerical_ids)
         else:
             cat_dist = (x[self.nominal_ids] == y[self.nominal_ids]).sum()
             dim = len(self.nominal_ids) + len(self.numerical_ids)
         return 1 - (num_dist + cat_dist) / dim
-    
+
     def update_count(self, cluster_dict):
         pass
+
 
 class KMeans:
     # partitioning-based
@@ -187,7 +190,7 @@ class KMeans:
         data = np.concatenate([data, ids_np], axis=1)
         print(data.shape)
         if self.data_reduction == "get_dummies":
-            self.calculator = Calculator(df, self.k, data, only_numeric=True)
+            self.calculator = GowerCalculator(df, self.k, data, only_numeric=False)
         else:
             self.calculator = Calculator(df, self.k, data, only_numeric=False)
         # 　假设一开始都在一个cluster上
@@ -202,7 +205,7 @@ class KMeans:
         start_time = time.time()
         while abs(old_variance - new_variance) > self.min_variance:
             end_time = time.time()
-            print(f"Iter {_iter}, Cost {end_time - start_time}, Loss {old_variance/len(df)}")
+            print(f"Iter {_iter}, Cost {end_time - start_time}, Loss {old_variance / len(df)}")
             if _iter >= self.max_iter:
                 break
             # 重新选平均值点作为簇中心
@@ -217,7 +220,7 @@ class KMeans:
             for node in nodes:
                 node_id = node[-1]
                 node_id2label[node_id] = label
-        return node_id2label, center_list
+        return node_id2label
 
 
 class Clique:
