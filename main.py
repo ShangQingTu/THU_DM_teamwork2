@@ -46,9 +46,12 @@ def main(args):
         # 　如果没有preprocess,　则drop标签列, 归一化
         _data_x = drop_irregular_columns(_data_x)
         _data_x = pd.DataFrame(std.fit_transform(_data_x))
+    # 是否做one-hot encoding
+    if args['data_reduction'] == 'get_dummies':
+        _data_x = pd.get_dummies(_data_x)
     # 选模型
     if args['model_name'] == 'KMeans':
-        clf = KMeans(args['k'], args['max_iter'])
+        clf = KMeans(args['k'], args['max_iter'], args['data_reduction'])
     elif args['model_name'] == 'Clique':
         clf = Clique()
     elif args['model_name'] == 'DBSCAN':
@@ -86,6 +89,8 @@ if __name__ == "__main__":
                         choices=['KMeans', 'Clique', 'DBSCAN', 'Hierarchical'])
     parser.add_argument('--data_name', type=str, default='processed_data',
                         choices=['diabetic_data', 'processed_data'])
+    parser.add_argument('--data_reduction', type=str, default='None',
+                        choices=['None', 'get_dummies'])
     # parser.add_argument('--train_size', type=float, default=0.8)
     # hyper parameters
     parser.add_argument('--seed', type=int, default=1453, help="random seed")

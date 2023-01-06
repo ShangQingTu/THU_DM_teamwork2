@@ -7,11 +7,10 @@ import time
 nominal_cols = ["race", "gender", "admission_type_id", "discharge_disposition_id", "admission_source_id", "change",
                 "diabetesMed", "metformin", "glimepiride", "glipizide", "glyburide", "pioglitazone",
                 "rosiglitazone", "insulin"]
-only_numeric = False
 
 
 class Calculator:
-    def __init__(self, df, k, data):
+    def __init__(self, df, k, data, only_numeric=False):
         self.only_numeric = only_numeric
         self.k = k
         self.numerical_ids = []
@@ -19,7 +18,10 @@ class Calculator:
         # 记录numerical和nominal属性的id
         for i, col in enumerate(df.columns.values):
             if col in nominal_cols:
-                self.nominal_ids.append(i)
+                if only_numeric:
+                    self.numerical_ids.append(i)
+                else:
+                    self.nominal_ids.append(i)
             else:
                 self.numerical_ids.append(i)
         self.id2count_split = {}  # key: cluster_id, value: a dict like self.id2count_merge
@@ -36,7 +38,9 @@ class Calculator:
             self.id2count_merge[col_id] = count_merge
 
     def update_count(self, cluster_dict):
-        # 每轮更新每个cluster上的counter
+        if self.only_numeric:
+            return
+            # 每轮更新每个cluster上的counter
         for cluster_id, _data in cluster_dict.items():
             id2count_merge = {}
             for col_id in self.nominal_ids:
@@ -84,9 +88,10 @@ class Calculator:
 
 class KMeans:
     # partitioning-based
-    def __init__(self, k, max_iter, min_variance=0.1):
+    def __init__(self, k, max_iter, data_reduction, min_variance=0.1):
         self.k = k
         self.max_iter = max_iter
+        self.data_reduction = data_reduction
         self.min_variance = min_variance
         self.calculator = None
 
@@ -144,7 +149,10 @@ class KMeans:
         print(data.shape)
         data = np.concatenate([data, ids_np], axis=1)
         print(data.shape)
-        self.calculator = Calculator(df, self.k, data)
+        if self.data_reduction == "get_dummies":
+            self.calculator = Calculator(df, self.k, data, only_numeric=True)
+        else:
+            self.calculator = Calculator(df, self.k, data, only_numeric=False)
         # 　假设一开始都在一个cluster上
         self.calculator.update_count({0: data})
         # 初始随机选中心
