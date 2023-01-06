@@ -162,6 +162,18 @@ python main.py --model_name Hierarchical --max_iter 12
 | 紧凑度             |               |                        |
 | 分离度             |               |                        |
 
+| 评价指标                           | K-Means       | Clique                 |
+| ------------------                | ------------- | ---------------------- |
+| 算法性能                           | local optimum | simple but low quality |
+| 同质性分数（homogeneity_score）     |               |                        |
+| 完整性分数（completeness_score）    |               |                        |
+| V-度量（v_measure_score）           |               |                        |
+| Calinski-Harabasz Index指数        |               |                        |
+| Silhouette Coefficient轮廓系数      |               |                        |
+| 复杂度                              | **$O(tkn)$**  | **$O(n^2)$** (worst)   |
+| Hopkins  Statistic                 |        0.7028                        |
+
+
 其中，t是迭代轮数，k是k-means的簇数，n是样本数量
 
 还有一些算出的数值指标:
