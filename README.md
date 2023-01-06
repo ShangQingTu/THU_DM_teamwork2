@@ -165,11 +165,11 @@ python main.py --model_name Hierarchical --max_iter 12
 | 评价指标                           | K-Means(VDM距离)|K-Means(gower距离)      |Hierarchical（VDM距离）|
 | ------------------                | ------------- | -------------- |---- |
 | 算法性能                           | local optimum |  |simple but low quality|
-| 同质性分数（homogeneity_score）     |0.00007       | 0.00237           ||
-| 完整性分数（completeness_score）    |0.00007       | 0.00205               ||
-| V-度量（v_measure_score）           |0.00007        |0.00220               ||
-| Calinski-Harabasz Index指数        |135.8314        |67635.53        ||
-| Silhouette Coefficient轮廓系数      |-0.01490       | 0.17921        ||
+| 同质性分数（homogeneity_score）     |0.00007       | 0.00237           |0.00105|
+| 完整性分数（completeness_score）    |0.00007       | 0.00205            |0.00092|
+| V-度量（v_measure_score）           |0.00007        |0.00220          |0.00098|
+| Calinski-Harabasz Index指数        |135.8314        |67635.53        |5449.617|
+| Silhouette Coefficient轮廓系数      |-0.01490       | 0.17921        |0.41943|
 | 复杂度                              | **$O(tkn)$**  |**$O(tkn)$** |**$O(n^2)$** (worst) |
 
 | Hopkins  Statistic                 |        0.7028  |
