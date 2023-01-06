@@ -169,7 +169,7 @@ python main.py --model_name Hierarchical --max_iter 12
 | V-度量（v_measure_score）           |0.00007        |0.00220          |0.00098|
 | Calinski-Harabasz Index指数        |135.8314        |67635.53        |5449.617|
 | Silhouette Coefficient轮廓系数      |-0.01490       | 0.17921        |0.41943|
-| 复杂度                              | **$O(tkn)$**  |**$O(tkn)$** |**$O(n^2)$** (worst) |
+| 复杂度                              | **$O(tkn)$** |**$O(tkn)$** |**$O(n^2)$**  |
 
 | Hopkins  Statistic                 |        0.7028  |
 | ------------------                | ------------- |
