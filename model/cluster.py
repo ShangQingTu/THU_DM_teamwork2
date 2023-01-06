@@ -81,6 +81,40 @@ class Calculator:
                 v_sum += self.cal_distance(j, center[i])
         return v_sum
 
+class GowerCalculator(Calculator):
+    def __init__(self, df):
+        self.numerical_ids = []
+        self.nominal_ids = []
+        # 记录numerical和nominal属性的id
+        for i, col in enumerate(df.columns.values):
+            if col in nominal_cols:
+                self.nominal_ids.append(i)
+            else:
+                self.numerical_ids.append(i)
+        # cat_features = [c in nominal_cols for c in df.columns]
+        # cat_features = np.bool8(cat_features)
+        # self.nominal_ids = cat_features
+        # self.numerical_ids = ~cat_features
+        num_data = df.iloc[:, self.numerical_ids].values
+        # self.nominal_ids = np.concatenate([self.nominal_ids,[False]])
+        # self.numerical_ids = np.concatenate([self.numerical_ids,[False]])
+        self.numerical_range = num_data.max(0) - num_data.min(0)
+        self.numerical_range[self.numerical_range == 0] = 1
+        del num_data
+
+    def cal_distance(self, x, y):
+        # x, y = x[:-1], y[:-1]
+        num_dist = (1 - np.abs(x[self.numerical_ids] - y[self.numerical_ids]) / self.numerical_range).sum()
+        if only_numeric:
+            cat_dist = 0
+            dim = len(self.numerical_ids)
+        else:
+            cat_dist = (x[self.nominal_ids] == y[self.nominal_ids]).sum()
+            dim = len(self.nominal_ids) + len(self.numerical_ids)
+        return 1 - (num_dist + cat_dist) / dim
+    
+    def update_count(self, cluster_dict):
+        pass
 
 class KMeans:
     # partitioning-based
@@ -136,15 +170,19 @@ class KMeans:
 
     def predict(self, df):
         # 数据准备
-        df = df.drop(columns=["Unnamed: 0"])
-        data = df.to_numpy()
+        if isinstance(df, pd.DataFrame):
+            # df = df.drop(columns=["Unnamed: 0"])
+            data = df.to_numpy()
+        elif isinstance(df, np.ndarray):
+            data = df
         ids = [[i] for i in range(len(data))]
         ids_np = np.asarray(ids)
-        print(ids_np.shape)
-        print(data.shape)
+        # print(ids_np.shape)
+        # print(data.shape)
         data = np.concatenate([data, ids_np], axis=1)
-        print(data.shape)
-        self.calculator = Calculator(df, self.k, data)
+        # print(data.shape)
+        # self.calculator = Calculator(df, self.k, data)
+        self.calculator = GowerCalculator(df)
         # 　假设一开始都在一个cluster上
         self.calculator.update_count({0: data})
         # 初始随机选中心
@@ -157,7 +195,7 @@ class KMeans:
         start_time = time.time()
         while abs(old_variance - new_variance) > self.min_variance:
             end_time = time.time()
-            print(f"Iter {_iter}, Cost {end_time - start_time}, Loss {old_variance}")
+            print(f"Iter {_iter}, Cost {end_time - start_time}, Loss {old_variance/len(df)}")
             if _iter >= self.max_iter:
                 break
             # 重新选平均值点作为簇中心
@@ -172,7 +210,7 @@ class KMeans:
             for node in nodes:
                 node_id = node[-1]
                 node_id2label[node_id] = label
-        return node_id2label
+        return node_id2label, center_list
 
 
 class Clique:
