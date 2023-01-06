@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import random
 import time
+from sklearn.cluster import KMeans as SKMeans
 
 nominal_cols = ["race", "gender", "admission_type_id", "discharge_disposition_id", "admission_source_id", "change",
                 "diabetesMed", "metformin", "glimepiride", "glipizide", "glyburide", "pioglitazone",
@@ -122,6 +123,24 @@ class GowerCalculator(Calculator):
     def update_count(self, cluster_dict):
         pass
 
+    def gower_get(self, xi, xj):
+        xi_cat, xj_cat = xi[self.nominal_ids], xj[:, self.nominal_ids]
+        xi_num, xj_num = xi[self.numerical_ids], xj[:, self.numerical_ids]
+
+        # categorical columns
+        sij_cat = np.where(xi_cat == xj_cat,np.zeros_like(xi_cat),np.ones_like(xi_cat))
+        sum_cat = sij_cat.sum(1)
+
+        # numerical columns
+        abs_delta=np.absolute(xi_num-xj_num)
+        sij_num=np.divide(abs_delta, self.numerical_range, out=np.zeros_like(abs_delta), where=self.numerical_range!=0)
+
+        sum_num = sij_num.sum(axis=1)
+        sums= np.add(sum_cat,sum_num)
+        sum_sij = sums / xi.size
+
+        return sum_sij
+
 
 class KMeans:
     # partitioning-based
@@ -240,6 +259,39 @@ class DBSCAN:
     def predict(self, df):
         pass
 
+class LSC:
+    def __init__(self, k, p):
+        self.k = k
+        self.p = p
+        self.kmeans = SKMeans(n_clusters=k)
+    
+    def predict(self, data):
+        self.gower = GowerCalculator(data, self.k, None)
+        data = data.values
+        idx = random.sample(range(len(data)), self.p)
+        U = data[idx]
+        dist = self.gowerdist(U, data).astype('float64')
+        # dist = self.L2dist(U, data).astype('float64')
+        temp = np.exp(-dist)
+        Z = temp / temp.sum(axis=0, keepdims=True)
+        D = np.diag(Z.sum(1)**-0.5)
+        Z_hat = D @ Z
+        ZZT = (Z_hat @ Z_hat.T).astype('float64')
+        E, V = np.linalg.eig(ZZT)
+        topk = E.argsort()[:self.k]
+        sigma = np.diag(E[topk]**-0.5)
+        A = V[:, topk]
+        B = sigma @ A.T @ Z_hat
+        B = B.T
+        self.kmeans.fit(B)
+        self.labels_ = self.kmeans.labels_
+        return self.labels_
+
+    def L2dist(self, X, Y):
+        return np.concatenate([np.linalg.norm(X[i] - Y, axis=-1, keepdims=True) for i in range(len(X))], 1).T
+    
+    def gowerdist(self, X, Y):
+        return np.concatenate([self.gower.gower_get(X[i], Y)[:, np.newaxis] for i in range(len(X))], 1).T
 
 class FastCalculator(Calculator):
     """

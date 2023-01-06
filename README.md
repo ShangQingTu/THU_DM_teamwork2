@@ -162,20 +162,20 @@ python main.py --model_name Hierarchical --max_iter 12
 | 紧凑度             |               |                        |
 | 分离度             |               |                        |
 
-| 评价指标                           | K-Means(闵可夫斯基距离+VDM距离)|K-Means(gower距离)      |Hierarchical（3000数据点采样、闵可夫斯基距离+VDM距离）|
-| ------------------                | ------------- | -------------- |---- |
-| 同质性分数（homogeneity_score）     |0.00007       | 0.00237           |0.00105|
-| 完整性分数（completeness_score）    |0.00007       | 0.00205            |0.00092|
-| V-度量（v_measure_score）           |0.00007        |0.00220          |0.00098|
-| Calinski-Harabasz Index指数        |135.8314        |67635.53        |5449.617|
-| Silhouette Coefficient轮廓系数      |-0.01490       | 0.17921        |0.41943|
-| 复杂度                              | **$O(tkn)$** |**$O(tkn)$** |**$O(n^2)$**  |
+| 评价指标                           | K-Means(闵可夫斯基距离+VDM距离)|K-Means(gower距离)      |Hierarchical（3000数据点采样、闵可夫斯基距离+VDM距离）| 基于Landmark的谱聚类 |
+| ------------------                | ------------- | -------------- |---- | ---|
+| 同质性分数（homogeneity_score）     |0.00007       | 0.00237           |0.00105| 0.00003|
+| 完整性分数（completeness_score）    |0.00007       | 0.00205            |0.00092| 0.00003|
+| V-度量（v_measure_score）           |0.00007        |0.00220          |0.00098| 0.00003 |
+| Calinski-Harabasz Index指数        |135.8314        |67635.53        |5449.617| 7.00136|
+| Silhouette Coefficient轮廓系数      |-0.01490       | 0.17921        |0.41943| -0.00514|
+| 复杂度                              | **$O(tkn)$** |**$O(tkn)$** |**$O(n^2)$**  | **$O(pnm+p^3+p^2n)$**|
 
 | Hopkins  Statistic                 |        0.7028  |
 | ------------------                | ------------- |
 
 
-其中，t是迭代轮数，k是k-means的簇数，n是样本数量
+其中，t是迭代轮数，k是k-means的簇数，n是样本数量，m是特征数，p是landmark的数量(p << n)
 
 还有一些算出的数值指标:
 

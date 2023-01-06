@@ -4,7 +4,7 @@ import numpy as np
 import os
 from sklearn import metrics
 from sklearn.preprocessing import StandardScaler
-from model.cluster import KMeans, DBSCAN, Clique, HierarchicalCluster
+from model.cluster import KMeans, DBSCAN, Clique, HierarchicalCluster, LSC
 
 
 def drop_irregular_columns(data_df):
@@ -59,10 +59,12 @@ def main(args):
     elif args['model_name'] == 'Hierarchical':
         clf = HierarchicalCluster(args['k'])
     else:
-        clf = None
+        clf = LSC(args['k'], p=1000)
     # 聚类
     node_id2label = clf.predict(_data_x)
     # 评价
+    if args['data_reduction'] != 'get_dummies':
+        _data_x = pd.get_dummies(_data_x)
     evaluate(node_id2label, _data_x)
 
 
@@ -86,7 +88,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # model and data
     parser.add_argument('--model_name', type=str, default='KMeans',
-                        choices=['KMeans', 'Clique', 'DBSCAN', 'Hierarchical'])
+                        choices=['KMeans', 'Clique', 'DBSCAN', 'Hierarchical', 'LSC'])
     parser.add_argument('--data_name', type=str, default='processed_data',
                         choices=['diabetic_data', 'processed_data'])
     parser.add_argument('--data_reduction', type=str, default='None',
